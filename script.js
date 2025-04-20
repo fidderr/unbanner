@@ -246,7 +246,7 @@ async function evaluateUserForUnban(browser, username, reason) {
 
   const contentUrls = uniqueByFullUrl.map(c => c.url).join('; ');
   const dutchCount = uniqueByFullUrl.filter(entry => entry.is_dutch).length;
-  const total = uniqueByFullUrl.length;
+  const total = uniqueByFullUrl.length + modLog.length;
   const dutchRatio = total > 0 ? (dutchCount / total) * 100 : 0;
 
   let note = '';
