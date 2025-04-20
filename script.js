@@ -1,4 +1,3 @@
-require('dotenv').config();
 const fs = require('fs');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -65,40 +64,41 @@ const randomDelay = (base) => {
   return new Promise(resolve => setTimeout(resolve, wait));
 };
 
-async function typeInShadowInput(page, componentSelector, inputSelector, value) {
-  const component = await page.waitForSelector(componentSelector, { visible: true });
-  const inputHandle = await component.evaluateHandle((el, selector) => el.shadowRoot.querySelector(selector), inputSelector);
-  await inputHandle.type(value, { delay: 30 });
-}
-
 async function smartLogin(page) {
   if (fs.existsSync(COOKIES_FILE)) {
     const cookies = JSON.parse(fs.readFileSync(COOKIES_FILE));
     await page.setCookie(...cookies);
-    await page.goto('https://www.reddit.com/login', { waitUntil: 'domcontentloaded' });
-    const loginField = await page.$('#login-username');
-    const passwordField = await page.$('#login-password');
-    if (!loginField && !passwordField) {
+    await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded' });
+
+    const isLoggedOut = await page.$('a[href*="/login"]');
+    if (!isLoggedOut) {
       log('✅ Reused session via cookies (already logged in).');
       return;
     }
-    log('⚠️ Cookies found, but not logged in. Doing full login...');
+
+    log('⚠️ Cookies found but not valid. Manual login required.');
   } else {
-    log('🔑 No cookies file. Doing fresh login...');
+    log('🔑 No cookies file. Manual login required.');
   }
 
   await page.goto('https://www.reddit.com/login', { waitUntil: 'domcontentloaded' });
-  await typeInShadowInput(page, '#login-username', 'input', process.env.REDDIT_USERNAME);
-  await typeInShadowInput(page, '#login-password', 'input', process.env.REDDIT_PASSWORD);
-  await randomDelay(1000);
 
-  const loginBtn = await page.waitForSelector('faceplate-tracker button.login', { visible: true });
-  await loginBtn.click();
-  await page.waitForNavigation({ waitUntil: 'networkidle2' });
-  log('✅ Logged in fresh, saving cookies...');
+  console.log('\n⏳ Please log in manually in the browser.');
+  console.log('👉 Press ENTER in this terminal once you are fully logged in.\n');
+
+  await new Promise(resolve => {
+    process.stdin.resume();
+    process.stdin.once('data', () => {
+      process.stdin.pause();
+      resolve();
+    });
+  });
+
   const cookies = await page.cookies();
   fs.writeFileSync(COOKIES_FILE, JSON.stringify(cookies, null, 2));
+  log('✅ Cookies saved. Continuing...');
 }
+
 
 async function processWithConcurrencyPool(tasks, limit, handler) {
   const results = [];
