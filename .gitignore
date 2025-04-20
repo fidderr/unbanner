@@ -1,0 +1,12 @@
+# Ignore environment variables
+.env
+
+# Ignore cookies
+cookies.json
+
+# Ignore result and scrape data
+result/
+scrape_html/
+
+# Ignore dependencies
+node_modules/
